@@ -20,3 +20,8 @@ const userAuth = async (req, res, next) => {
     next();
   }
 };
+
+module.export = {
+  isAdmin,
+  userAuth,
+};
