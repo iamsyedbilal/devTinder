@@ -3,16 +3,23 @@ const connectDB = require("./config/database");
 const User = require("./models/user");
 
 const app = express();
+app.use(express.json());
 
 app.post("/signup", function (req, res) {
-  const userObj = {
-    firstName: "Syed",
-    lastName: "Bilal",
-    emailId: "syedbilal@gmail.com",
-    password: "bilal123",
-  };
+  // const userObj = {
+  //   firstName: "Syed",
+  //   lastName: "Bilal",
+  //   emailId: "syedbilal@gmail.com",
+  //   password: "bilal123",
+  // };
 
   try {
+    const userObj = req.body;
+
+    if (!userObj) {
+      res.send("User cannot be empty").statusCode(400);
+    }
+
     const user = User.create(userObj);
 
     if (!user) {
