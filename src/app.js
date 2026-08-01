@@ -7,13 +7,6 @@ app.use(express.json());
 
 // API - Signup
 app.post("/signup", async function (req, res) {
-  // const userObj = {
-  //   firstName: "Syed",
-  //   lastName: "Bilal",
-  //   emailId: "syedbilal@gmail.com",
-  //   password: "bilal123",
-  // };
-
   const userObj = req.body;
 
   if (!userObj) {
@@ -25,6 +18,26 @@ app.post("/signup", async function (req, res) {
 
     if (!user) {
       res.send("Error while creating the user").status(400);
+    }
+
+    if (user.password !== user.confirmPassword) {
+      res.send("Password and confirm password do not match").status(400);
+    }
+
+    if (user?.skills.length > 10) {
+      res.send("Skills should not exceed 10").status(400);
+    }
+
+    if (user?.age < 18) {
+      res.send("Age should be at least 18").status(400);
+    }
+
+    if (user?.about?.length > 500) {
+      res.send("About section should not exceed 500 characters").status(400);
+    }
+    
+    if (user?.profileImage && !user?.profileImage.startsWith("http")) {
+      res.send("Profile image should be a valid URL").status(400);
     }
 
     res.send("User created successfully").status(200);
@@ -87,8 +100,8 @@ app.delete("/user", async function (req, res) {
 });
 
 // API - Update User
-app.patch("/user", async function (req, res) {
-  const { userId } = req.body;
+app.patch("/user/:userId", async function (req, res) {
+  const { userId } = req.params;
   const data = req.body;
 
   if (!userId) {
@@ -100,10 +113,56 @@ app.patch("/user", async function (req, res) {
   }
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, data);
+    const ALLOWED_UPDATES = [
+      "firstName",
+      "lastName",
+      "password",
+      "confirmPassword",
+      "age",
+      "gender",
+      "userId",
+      "profileImage",
+      "about",
+      "skills",
+    ];
+
+    const isUpdateAllowed = Object.keys(data).every((key) =>
+      ALLOWED_UPDATES.includes(key),
+    );
+
+    if (!isUpdateAllowed) {
+      res.send("Invalid updates").status(400);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, data, {
+      validateBeforeSave: true,
+    });
 
     if (!updatedUser) {
       res.send("user not updated").status(400);
+    }
+
+    if (updatedUser.password !== updatedUser.confirmPassword) {
+      res.send("Password and confirm password do not match").status(400);
+    }
+
+    if (updatedUser?.skills.length > 10) {
+      res.send("Skills should not exceed 10").status(400);
+    }
+
+    if (updatedUser?.age < 18) {
+      res.send("Age should be at least 18").status(400);
+    }
+
+    if (updatedUser?.about?.length > 500) {
+      res.send("About section should not exceed 500 characters").status(400);
+    }
+
+    if (
+      updatedUser?.profileImage &&
+      !updatedUser?.profileImage.startsWith("http")
+    ) {
+      res.send("Profile image should be a valid URL").status(400);
     }
 
     res.send("user updated " + updatedUser).status(201);
