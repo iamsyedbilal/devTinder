@@ -5,15 +5,22 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
+      trim: true,
       required: [true, "First name is required"],
       minlength: [3, "First name should be at least 3 characters long"],
+      maxlength: [30, "First name should not exceed 30 characters"],
     },
     lastName: {
       type: String,
+      trim: true,
+      required: [true, "Last name is required"],
       minlength: [3, "Last name should be at least 3 characters long"],
+      maxlength: [30, "Last name should not exceed 30 characters"],
     },
     emailId: {
       type: String,
+      trim: true,
+      lowercase: true,
       unique: [true, "Email already exists"],
       required: [true, "Email is required"],
       validate: {
@@ -26,34 +33,11 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      validate: {
-        validator: function (value) {
-          return validator.isStrongPassword(value, {
-            minLength: 6,
-            minLowercase: 1,
-            minUppercase: 0,
-            minNumbers: 1,
-            minSymbols: 0,
-          });
-        },
-        message: (props) =>
-          `${props.value} password must be at least 6 characters long and contain at least one lowercase letter and one number`,
-      },
-    },
-    confirmPassword: {
-      type: String,
-      required: [true, "Please confirm your password"],
-      validate: {
-        validator: function (value) {
-          // Check if confirmPassword matches password
-          return value === this.password;
-        },
-        message: "Passwords do not match",
-      },
     },
     age: {
       type: Number,
       min: [18, "Age should be at least 18"],
+      max: [100, "Age should not exceed 100"],
     },
     gender: {
       type: String,
@@ -79,10 +63,14 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
       validate: {
-        validator: function (value) {
-          return value.length <= 10;
+        validator(value) {
+          return (
+            value.length <= 10 &&
+            new Set(value).size === value.length &&
+            value.every((skill) => skill.trim() !== "")
+          );
         },
-        message: "Skills should not exceed 10",
+        message: "Skills must be unique, non-empty and cannot exceed 10 items",
       },
     },
   },
@@ -90,6 +78,14 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+userSchema.set("toJSON", {
+  transform(doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  },
+});
 
 const User = mongoose.model("User", userSchema);
 

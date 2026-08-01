@@ -1,27 +1,59 @@
 const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./models/user");
+const validateSignupData = require("./utils/validation");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 app.use(express.json());
 
 // API - Signup
 app.post("/signup", async function (req, res) {
-  const userObj = req.body;
+  const { errors, isValid } = validateSignupData(req.body);
 
-  if (Object.keys(userObj).length === 0) {
-    return res.status(400).send("User cannot be empty");
+  if (!isValid) {
+    return res.status(400).json({ errors });
   }
 
   try {
-    const user = await User.create(userObj);
+    const { firstName, lastName, emailId, password } = req.body;
 
-    if (!user) {
-      return res.status(400).send("Error while creating the user");
+    const normalizedEmail = emailId.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      emailId: normalizedEmail,
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        errors: {
+          emailId: "Email already exists",
+        },
+      });
     }
 
-    return res.status(200).send("User created successfully");
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      emailId: normalizedEmail,
+      password: hashedPassword,
+    });
+
+    return res.status(201).json({
+      message: "User created successfully",
+      user,
+    });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        errors: {
+          emailId: "Email already exists",
+        },
+      });
+    }
+
     return res.status(400).json({
       message: error.message,
     });
