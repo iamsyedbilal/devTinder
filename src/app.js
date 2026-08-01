@@ -9,40 +9,22 @@ app.use(express.json());
 app.post("/signup", async function (req, res) {
   const userObj = req.body;
 
-  if (!userObj) {
-    res.send("User cannot be empty").status(400);
+  if (Object.keys(userObj).length === 0) {
+    return res.status(400).send("User cannot be empty");
   }
 
   try {
     const user = await User.create(userObj);
 
     if (!user) {
-      res.send("Error while creating the user").status(400);
+      return res.status(400).send("Error while creating the user");
     }
 
-    if (user.password !== user.confirmPassword) {
-      res.send("Password and confirm password do not match").status(400);
-    }
-
-    if (user?.skills.length > 10) {
-      res.send("Skills should not exceed 10").status(400);
-    }
-
-    if (user?.age < 18) {
-      res.send("Age should be at least 18").status(400);
-    }
-
-    if (user?.about?.length > 500) {
-      res.send("About section should not exceed 500 characters").status(400);
-    }
-    
-    if (user?.profileImage && !user?.profileImage.startsWith("http")) {
-      res.send("Profile image should be a valid URL").status(400);
-    }
-
-    res.send("User created successfully").status(200);
+    return res.status(200).send("User created successfully");
   } catch (error) {
-    res.send(`Error: user not created ${error}`).status(400);
+    return res.status(400).json({
+      message: error.message,
+    });
   }
 });
 
@@ -51,19 +33,21 @@ app.get("/user", async function (req, res) {
   const { emailId } = req.body;
 
   if (!emailId) {
-    res.send("Email cannot be empty").status(400);
+    return res.status(400).send("Email cannot be empty");
   }
 
   try {
-    const user = await User.find({ emailId });
+    const user = await User.findOne({ emailId });
 
     if (!user) {
-      res.send("User not found").status(400);
+      return res.status(404).send("User not found");
     }
 
-    res.send(user).status(200);
+    return res.status(200).send(user);
   } catch (error) {
-    res.send(`Error: user not found ${error}`).status(400);
+    return res.status(400).json({
+      message: error.message,
+    });
   }
 });
 
@@ -73,12 +57,14 @@ app.get("/feed", async function (req, res) {
     const user = await User.find();
 
     if (!user) {
-      res.send("User not found").status(400);
+      return res.status(404).send("User not found");
     }
 
-    res.send(user).status(200);
+    return res.status(200).send(user);
   } catch (error) {
-    res.send(`Error: user not found ${error}`).status(400);
+    return res.status(400).json({
+      message: error.message,
+    });
   }
 });
 
@@ -87,15 +73,21 @@ app.delete("/user", async function (req, res) {
   const { userId } = req.body;
 
   if (!userId) {
-    res.send("Invalid user id").status(400);
+    return res.status(400).send("Invalid user id");
   }
 
   try {
-    await User.findByIdAndDelete({ _id: userId });
+    const deletedUser = await User.findByIdAndDelete(userId);
 
-    res.send("user deleted").status(201);
+    if (!deletedUser) {
+      return res.status(404).send("User not found");
+    }
+
+    return res.status(200).send("User deleted");
   } catch (error) {
-    res.send(`Error: user not found ${error}`).status(400);
+    return res.status(400).json({
+      message: error.message,
+    });
   }
 });
 
@@ -105,11 +97,11 @@ app.patch("/user/:userId", async function (req, res) {
   const data = req.body;
 
   if (!userId) {
-    res.send("Invalid user id").status(400);
+    return res.status(400).send("Invalid user id");
   }
 
-  if (!data) {
-    res.send("data is required").status(400);
+  if (Object.keys(data).length === 0) {
+    return res.status(400).send("Data is required");
   }
 
   try {
@@ -120,7 +112,6 @@ app.patch("/user/:userId", async function (req, res) {
       "confirmPassword",
       "age",
       "gender",
-      "userId",
       "profileImage",
       "about",
       "skills",
@@ -131,43 +122,28 @@ app.patch("/user/:userId", async function (req, res) {
     );
 
     if (!isUpdateAllowed) {
-      res.send("Invalid updates").status(400);
+      return res.status(400).send("Invalid updates");
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, data, {
-      validateBeforeSave: true,
+      new: true,
+      runValidators: true,
     });
 
     if (!updatedUser) {
-      res.send("user not updated").status(400);
+      return res.status(400).json({
+        message: "User not updated",
+      });
     }
 
-    if (updatedUser.password !== updatedUser.confirmPassword) {
-      res.send("Password and confirm password do not match").status(400);
-    }
-
-    if (updatedUser?.skills.length > 10) {
-      res.send("Skills should not exceed 10").status(400);
-    }
-
-    if (updatedUser?.age < 18) {
-      res.send("Age should be at least 18").status(400);
-    }
-
-    if (updatedUser?.about?.length > 500) {
-      res.send("About section should not exceed 500 characters").status(400);
-    }
-
-    if (
-      updatedUser?.profileImage &&
-      !updatedUser?.profileImage.startsWith("http")
-    ) {
-      res.send("Profile image should be a valid URL").status(400);
-    }
-
-    res.send("user updated " + updatedUser).status(201);
+    return res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
-    res.send(`Error: user not update ${error}`).status(400);
+    return res.status(400).json({
+      message: `Error: user not updated ${error}`,
+    });
   }
 });
 
