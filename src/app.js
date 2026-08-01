@@ -56,7 +56,7 @@ app.get("/feed", async function (req, res) {
   try {
     const user = await User.find();
 
-    if (!user) {
+    if (user.length === 0) {
       return res.status(404).send("User not found");
     }
 
@@ -131,8 +131,8 @@ app.patch("/user/:userId", async function (req, res) {
     });
 
     if (!updatedUser) {
-      return res.status(400).json({
-        message: "User not updated",
+      return res.status(404).json({
+        message: "User not found",
       });
     }
 

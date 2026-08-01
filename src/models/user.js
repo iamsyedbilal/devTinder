@@ -1,15 +1,16 @@
 const mongoose = require("mongoose");
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
       required: [true, "First name is required"],
-      minLength: [3, "First name should be at least 3 characters long"],
+      minlength: [3, "First name should be at least 3 characters long"],
     },
     lastName: {
       type: String,
-      minlength: [3, "First name should be at least 3 characters long"],
+      minlength: [3, "Last name should be at least 3 characters long"],
     },
     emailId: {
       type: String,
@@ -17,25 +18,26 @@ const userSchema = new mongoose.Schema(
       required: [true, "Email is required"],
       validate: {
         validator: function (value) {
-          // Regular expression for email validation
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          return emailRegex.test(value);
+          return validator.isEmail(value);
         },
-        message: (props) => `${props.value} is not a valid email address!`,
+        message: (props) => `${props.value} is not a valid email!`,
       },
     },
     password: {
       type: String,
       required: [true, "Password is required"],
-      minLength: [6, "Password should be at least 6 characters long"],
       validate: {
         validator: function (value) {
-          // Regular expression for password validation
-          const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-          return passwordRegex.test(value);
+          return validator.isStrongPassword(value, {
+            minLength: 6,
+            minLowercase: 1,
+            minUppercase: 0,
+            minNumbers: 1,
+            minSymbols: 0,
+          });
         },
         message: (props) =>
-          `${props.value} is not a valid password! Password should contain at least one letter and one number.`,
+          `${props.value} password must be at least 6 characters long and contain at least one lowercase letter and one number`,
       },
     },
     confirmPassword: {
@@ -43,6 +45,7 @@ const userSchema = new mongoose.Schema(
       required: [true, "Please confirm your password"],
       validate: {
         validator: function (value) {
+          // Check if confirmPassword matches password
           return value === this.password;
         },
         message: "Passwords do not match",
@@ -55,12 +58,6 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["male", "female", "other"],
-      validate: {
-        validator: function (value) {
-          return ["male", "female", "other"].includes(value);
-        },
-        message: (props) => `${props.value} is not a valid gender`,
-      },
     },
     about: {
       type: String,
@@ -71,10 +68,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator: function (value) {
-          // Regular expression for URL validation
-          const urlRegex =
-            /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?$/;
-          return urlRegex.test(value);
+          return validator.isURL(value);
         },
         message: (props) => `${props.value} is not a valid URL`,
       },
