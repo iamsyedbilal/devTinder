@@ -1,12 +1,16 @@
+require("dotenv").config();
 const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./models/user");
-const validateSignupData = require("./utils/validation");
-const validateLoginData = require("./utils/loginValidation");
+const { validateSignupData, validateLoginData } = require("./utils/validation");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const userAuth = require("./middlewares/auth");
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 
 // API - Signup
 app.post("/signup", async function (req, res) {
@@ -62,7 +66,7 @@ app.post("/signup", async function (req, res) {
 });
 
 // API - Signing
-app.post("/signing", async function (req, res) {
+app.post("/signin", async function (req, res) {
   const { errors, isValid } = validateLoginData(req.body);
 
   if (!isValid) {
@@ -94,10 +98,23 @@ app.post("/signing", async function (req, res) {
       });
     }
 
-    return res.status(200).json({
-      message: "User signed in successfully",
-      user,
-    });
+    if (isPasswordValid) {
+      const token = await jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: process.env.JWT_EXPIRES_IN,
+        },
+      );
+
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 3600000),
+      });
+      return res.status(200).json({
+        message: "User signed in successfully",
+        user,
+      });
+    }
   } catch (error) {
     return res.status(400).json({
       message: error.message,
@@ -105,62 +122,21 @@ app.post("/signing", async function (req, res) {
   }
 });
 
-// API - GET User By Email
-app.get("/user", async function (req, res) {
-  const { emailId } = req.body;
-
-  if (!emailId) {
-    return res.status(400).send("Email cannot be empty");
-  }
-
+// API - GET User Profile
+app.get("/profile", userAuth, async function (req, res) {
   try {
-    const user = await User.findOne({ emailId });
+    const user = req.user;
 
     if (!user) {
-      return res.status(404).send("User not found");
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    return res.status(200).send(user);
-  } catch (error) {
-    return res.status(400).json({
-      message: error.message,
+    return res.status(200).json({
+      message: "User profile retrieved successfully",
+      user,
     });
-  }
-});
-
-// API - GET All Users
-app.get("/feed", async function (req, res) {
-  try {
-    const user = await User.find();
-
-    if (user.length === 0) {
-      return res.status(404).send("User not found");
-    }
-
-    return res.status(200).send(user);
-  } catch (error) {
-    return res.status(400).json({
-      message: error.message,
-    });
-  }
-});
-
-// API - Delete Users
-app.delete("/user", async function (req, res) {
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).send("Invalid user id");
-  }
-
-  try {
-    const deletedUser = await User.findByIdAndDelete(userId);
-
-    if (!deletedUser) {
-      return res.status(404).send("User not found");
-    }
-
-    return res.status(200).send("User deleted");
   } catch (error) {
     return res.status(400).json({
       message: error.message,
