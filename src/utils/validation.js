@@ -53,4 +53,29 @@ function validateSignupData(data) {
   };
 }
 
-module.exports = validateSignupData;
+function validateLoginData(data) {
+  const errors = {};
+  const { emailId, password } = data;
+
+  // Validate emailId
+  if (!emailId || !emailId.trim()) {
+    errors.emailId = "Email is required";
+  } else if (!validator.isEmail(emailId.trim())) {
+    errors.emailId = "Invalid email";
+  }
+
+  // Validate password
+  if (!password || !password.trim()) {
+    errors.password = "Password is required";
+  }
+
+  return {
+    errors,
+    isValid: Object.keys(errors).length === 0,
+  };
+}
+
+module.exports = {
+  validateSignupData,
+  validateLoginData,
+};

@@ -2,6 +2,7 @@ const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./models/user");
 const validateSignupData = require("./utils/validation");
+const validateLoginData = require("./utils/loginValidation");
 const bcrypt = require("bcryptjs");
 
 const app = express();
@@ -54,6 +55,50 @@ app.post("/signup", async function (req, res) {
       });
     }
 
+    return res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
+// API - Signing
+app.post("/signing", async function (req, res) {
+  const { errors, isValid } = validateLoginData(req.body);
+
+  if (!isValid) {
+    return res.status(400).json({ errors });
+  }
+
+  try {
+    const { emailId, password } = req.body;
+
+    const normalizedEmail = emailId.trim().toLowerCase();
+
+    const user = await User.findOne({ emailId: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        errors: {
+          emailId: "User not found",
+        },
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        errors: {
+          password: "Invalid password",
+        },
+      });
+    }
+
+    return res.status(200).json({
+      message: "User signed in successfully",
+      user,
+    });
+  } catch (error) {
     return res.status(400).json({
       message: error.message,
     });
