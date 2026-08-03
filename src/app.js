@@ -3,8 +3,6 @@ const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./models/user");
 const { validateSignupData, validateLoginData } = require("./utils/validation");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const userAuth = require("./middlewares/auth");
 
@@ -37,13 +35,11 @@ app.post("/signup", async function (req, res) {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       emailId: normalizedEmail,
-      password: hashedPassword,
+      password,
     });
 
     return res.status(201).json({
@@ -88,7 +84,7 @@ app.post("/signin", async function (req, res) {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -99,13 +95,7 @@ app.post("/signin", async function (req, res) {
     }
 
     if (isPasswordValid) {
-      const token = await jwt.sign(
-        { userId: user._id },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: process.env.JWT_EXPIRES_IN,
-        },
-      );
+      const token = await user.getJWTToken();
 
       res.cookie("token", token, {
         expires: new Date(Date.now() + 3600000),

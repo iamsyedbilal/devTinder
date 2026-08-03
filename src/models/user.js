@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
@@ -79,6 +81,21 @@ const userSchema = new mongoose.Schema(
   },
 );
 
+// Pre-save hook to hash the password before saving the user
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Instance method to compare the provided password with the hashed password
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// toJSON method to exclude sensitive information when converting the user document to JSON
 userSchema.set("toJSON", {
   transform(doc, ret) {
     delete ret.password;
@@ -86,6 +103,13 @@ userSchema.set("toJSON", {
     return ret;
   },
 });
+
+// Method to generate JWT token
+userSchema.methods.getJWTToken = async function () {
+  return await jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+};
 
 const User = mongoose.model("User", userSchema);
 
