@@ -82,12 +82,11 @@ const userSchema = new mongoose.Schema(
 );
 
 // Pre-save hook to hash the password before saving the user
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Instance method to compare the provided password with the hashed password
@@ -111,6 +110,6 @@ userSchema.methods.getJWTToken = async function () {
   });
 };
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 module.exports = User;
