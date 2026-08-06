@@ -5,6 +5,7 @@ const User = require("../models/User");
 
 const connectionRouter = express.Router();
 
+// API - Send Connection Request
 connectionRouter.post(
   "/request/send/:status/:toUserId",
   userAuth,
@@ -36,7 +37,7 @@ connectionRouter.post(
       if (existingUser) {
         return res
           .status(400)
-          .json({ message: "Connection request has already been send" });
+          .json({ message: "Connection request has already been sent" });
       }
 
       if (fromUserId.equals(toUserId)) {
@@ -61,6 +62,50 @@ connectionRouter.post(
 
       res.status(200).json({
         message: `${req.user.firstName} ${status} connection request of ${toUser.firstName}`,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+);
+
+// API - Accept Or Reject Connection Request
+connectionRouter.post(
+  "/request/review/:status/:requestId",
+  userAuth,
+  async function (req, res) {
+    try {
+      const { status, requestId } = req.params;
+
+      const user = req.user;
+
+      const ALLOWED_STATUS = ["accepted", "rejected"];
+
+      if (!ALLOWED_STATUS.includes(status)) {
+        return res.status(400).json({ message: "Status not allowed" });
+      }
+
+      const connectionStatus = await ConnectionRequest.findOne({
+        _id: requestId,
+        toUserId: user._id,
+        status: "interested",
+      });
+
+      if (!connectionStatus) {
+        return res
+          .status(400)
+          .json({ message: "Connection request not found" });
+      }
+
+      connectionStatus.status = status;
+
+      const updatedConnection = await connectionStatus.save();
+
+      return res.status(200).json({
+        message: `Connection request has been ${status}`,
+        connection: updatedConnection,
       });
     } catch (error) {
       return res.status(500).json({
