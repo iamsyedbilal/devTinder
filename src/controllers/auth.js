@@ -9,7 +9,10 @@ async function signup(req, res) {
   const { errors, isValid } = validateSignupData(req.body);
 
   if (!isValid) {
-    return res.status(400).json({ errors });
+    return res.status(400).json({
+      message: "Please correct the highlighted fields and try again.",
+      errors,
+    });
   }
 
   try {
@@ -24,7 +27,7 @@ async function signup(req, res) {
     if (existingUser) {
       return res.status(409).json({
         errors: {
-          emailId: "Email already exists",
+          emailId: "This email is already registered. Please sign in instead.",
         },
       });
     }
@@ -37,20 +40,20 @@ async function signup(req, res) {
     });
 
     return res.status(201).json({
-      message: "User created successfully",
+      message: "Account created successfully. Please sign in to continue.",
       user,
     });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
         errors: {
-          emailId: "Email already exists",
+          emailId: "This email is already registered. Please sign in instead.",
         },
       });
     }
 
     return res.status(400).json({
-      message: error.message,
+      message: "We couldn't create your account. Please try again.",
     });
   }
 }
@@ -60,7 +63,10 @@ async function signin(req, res) {
   const { errors, isValid } = validateLoginData(req.body);
 
   if (!isValid) {
-    return res.status(400).json({ errors });
+    return res.status(400).json({
+      message: "Please enter a valid email and password.",
+      errors,
+    });
   }
 
   try {
@@ -73,7 +79,7 @@ async function signin(req, res) {
     if (!user) {
       return res.status(404).json({
         errors: {
-          emailId: "User not found",
+          emailId: "No account found with this email. Please sign up first.",
         },
       });
     }
@@ -83,25 +89,23 @@ async function signin(req, res) {
     if (!isPasswordValid) {
       return res.status(401).json({
         errors: {
-          password: "Invalid password",
+          password: "The password you entered is incorrect. Please try again.",
         },
       });
     }
 
-    if (isPasswordValid) {
-      const token = await user.getJWTToken();
+    const token = await user.getJWTToken();
 
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 3600000),
-      });
-      return res.status(200).json({
-        message: "User signed in successfully",
-        user,
-      });
-    }
+    res.cookie("token", token, {
+      expires: new Date(Date.now() + 3600000),
+    });
+    return res.status(200).json({
+      message: "Signed in successfully.",
+      user,
+    });
   } catch (error) {
     return res.status(400).json({
-      message: error.message,
+      message: "We couldn't sign you in. Please try again.",
     });
   }
 }
@@ -112,7 +116,7 @@ async function signout(req, res) {
     expires: new Date(Date.now()),
   });
   return res.status(200).json({
-    message: "User signed out successfully",
+    message: "Signed out successfully.",
   });
 }
 
